@@ -2,11 +2,12 @@ use multer::{bytes::Bytes, Multipart};
 use rocket::{
     self,
     data::{self, ByteUnit, FromData, ToByteUnit},
+    figment::value::magic::RelativePathBuf,
     form::Error,
     http::{ContentType, Status},
     outcome::Outcome::{Failure, Forward, Success},
     route::Outcome,
-    Data, Request, config, Config,
+    Data, Request,
 };
 use std::sync::Arc;
 use std::{collections::HashMap, env, path::PathBuf};
@@ -115,7 +116,7 @@ where
     S: ScalarValue,
 {
     pub operations: GraphQLOperationsRequest<S>,
-    pub files: Option<HashMap<String, TempFile>>
+    pub files: Option<HashMap<String, TempFile>>,
 }
 
 impl<S> GraphQLUploadWrapper<S>
@@ -138,9 +139,9 @@ where
         match reader_result {
             Ok(_) => match serde_json::from_str(&body) {
                 Ok(req) => Ok(req),
-                Err(e) => Err(Failure(Status::BadRequest)),
+                Err(_) => Err(Failure(Status::BadRequest)),
             },
-            Err(e) => Err(Failure(Status::BadRequest)),
+            Err(_) => Err(Failure(Status::BadRequest)),
         }
     }
 
@@ -156,7 +157,7 @@ where
             Ok(_) => Ok(GraphQLBatchRequest::Single(http::GraphQLRequest::new(
                 body, None, None,
             ))),
-            Err(e) => Err(Failure(Status::BadRequest)),
+            Err(_) => Err(Failure(Status::BadRequest)),
         }
     }
 
@@ -165,11 +166,14 @@ where
         data: Data<'r>,
         content_type: &ContentType,
         file_limit: ByteUnit,
-        temp_dir: PathBuf
+        temp_dir: RelativePathBuf,
     ) -> Result<(GraphQLBatchRequest<S>, Option<HashMap<String, TempFile>>), Error<'r>> {
         // Builds a void query for development
         let mut query: String = String::new();
-        let mut map: String = String::new();
+
+        // For further developments when we'll want to rebuild the map
+        // let mut map: String = String::new();
+
         let boundary = Self::get_boundary(content_type).unwrap();
 
         // Create and read a datastream from the request body
@@ -191,7 +195,7 @@ where
 
             let name = field_name;
             let current_dir = env::current_dir().unwrap();
-            let path = current_dir.join(&temp_dir);
+            let path = current_dir.join(&temp_dir.original());
             match entry.content_type().as_ref() {
                 Some(_) => {
                     let file_name = match entry.file_name() {
@@ -204,7 +208,7 @@ where
                         Err(_) => Bytes::new(),
                     };
 
-                    let mut tmpfile = TempFile {
+                    let tmpfile = TempFile {
                         name: file_name,
                         size: Some(content.len()),
                         local_path: PathBuf::from(&path),
@@ -216,10 +220,8 @@ where
                 None => {
                     let content_data = entry.text().await;
 
-
                     match content_data {
                         Ok(result) => {
-
                             // If field name is operations which should be the graphQL Query
                             // according to spec
                             if name.as_str() == "operations" {
@@ -227,7 +229,7 @@ where
                                 continue;
                             }
 
-                            // If query provides a field map this could 
+                            // If query provides a field map this could
                             // be used to improve file processing
                             // if name.as_str() == "map" {
                             //     map = result;
@@ -269,7 +271,6 @@ where
         }
     }
 }
-
 
 #[rocket::async_trait]
 impl<'r, S> FromData<'r> for GraphQLUploadWrapper<S>
@@ -317,7 +318,7 @@ where
                         data,
                         content_type,
                         req.limits().get("data-form").unwrap(),
-                        req.rocket().config().temp_dir.clone()
+                        req.rocket().config().temp_dir.clone(),
                     )
                     .await
                     {

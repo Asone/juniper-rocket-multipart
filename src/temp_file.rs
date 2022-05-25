@@ -56,37 +56,31 @@ impl TempFile {
 
     /// Persists the file to the local_path property
     pub fn persist_file(&self) -> Result<PathBuf, Error> {
-
         let absolute_path = format!(
             "{}/{}",
-            &self.local_path.to_str().unwrap(), 
+            &self.local_path.to_str().unwrap(),
             uuid::Uuid::new_v4()
         );
 
         match Self::path_checker(&absolute_path) {
             Ok(_) => {
-            let file_path = format!(
-                "{}/{}",
-                absolute_path,
-                &self.name
-            );
+                let file_path = format!("{}/{}", absolute_path, &self.name);
 
-            let file = File::create(&file_path);
+                let file = File::create(&file_path);
 
-            match file {
-                Ok(mut file) => {
-                    let result = file.write_all(&self.content);
-                    match result {
-                        Ok(_) => Ok(PathBuf::from(file_path)),
-                        Err(error) => Err(error),
+                match file {
+                    Ok(mut file) => {
+                        let result = file.write_all(&self.content);
+                        match result {
+                            Ok(_) => Ok(PathBuf::from(file_path)),
+                            Err(error) => Err(error),
+                        }
                     }
+                    Err(error) => Err(error),
                 }
-                Err(error) => Err(error),
             }
-            },
-            Err(error) => Err(error)
+            Err(error) => Err(error),
         }
-        
     }
 
     /// persists file to a given location
@@ -112,3 +106,6 @@ impl TempFile {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {}
