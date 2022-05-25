@@ -1,12 +1,15 @@
 [package]
 name = "juniper_rocket_multipart_handler"
-version = "0.0.1"
+version = "0.1.0"
 description = "A juniper multipart handler for Rocket web server"
 authors = ["Nelson Herbin <nelson@herbin.info>"]
 edition = "2021"
 license = "CC0-1.0"
-repository = "https://github.com/Asone/graphQLN"
-homepage = "https://github.com/Asone/graphQLN"
+repository = "https://github.com/Asone/juniper-rocket-multipart"
+homepage = "https://github.com/Asone/juniper-rocket-multipart"
+documentation = "https://github.com/Asone/juniper-rocket-multipart"
+keywords = ["rocket", "juniper","multipart","form-data","file upload"]
+categories = ["filesystem"]
 
 [dependencies]
 multer = "2.0.2"
